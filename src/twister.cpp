@@ -1017,11 +1017,32 @@ bool processReceivedDM(lazy_entry const* post)
 
     lazy_entry const* dm = post->dict_find_dict("dm");
     if( dm ) {
-        ecies_secure_t sec;
-        sec.key = dm->dict_find_string_value("key");
-        sec.mac = dm->dict_find_string_value("mac");
-        sec.orig = dm->dict_find_int_value("orig");
-        sec.body = dm->dict_find_string_value("body");
+        bool oldFormat = !dm->dict_find_dict("1");
+
+        std::string sender = post->dict_find_string_value("n");
+        int64_t utcTime = post->dict_find_int_value("time");
+
+        vector<ecies_secure_t> secList;
+        if( oldFormat ) {
+            ecies_secure_t sec;
+            sec.key = dm->dict_find_string_value("key");
+            sec.mac = dm->dict_find_string_value("mac");
+            sec.orig = dm->dict_find_int_value("orig");
+            sec.body = dm->dict_find_string_value("body");
+            secList.push_back(sec);
+        } else {
+            for(char i='1'; i<='2'; ++i) {
+                std::string stri(1, i);
+                lazy_entry const* dmi = dm->dict_find_dict(stri.c_str());
+
+                ecies_secure_t sec;
+                sec.key = dmi->dict_find_string_value("key");
+                sec.mac = dmi->dict_find_string_value("mac");
+                sec.orig = dmi->dict_find_int_value("orig");
+                sec.body = dmi->dict_find_string_value("body");
+                secList.push_back(sec);
+            }
+        }
 
         LOCK(pwalletMain->cs_wallet);
         BOOST_FOREACH(const PAIRTYPE(CKeyID, CKeyMetadata)& item, pwalletMain->mapKeyMetadata)
@@ -1030,94 +1051,63 @@ bool processReceivedDM(lazy_entry const* post)
             if (!pwalletMain->GetKey(item.first, key)) {
                 printf("acceptSignedPost: private key not available trying to decrypt DM.\n");
             } else {
-                std::string textOut;
-                if( key.Decrypt(sec, textOut) ) {
-                    /* this printf is good for debug, but bad for security.
-                    printf("Received DM for user '%s' text = '%s'\n",
-                           item.second.username.c_str(),
-                           textOut.c_str());
-                    */
-
-                    std::string n = post->dict_find_string_value("n");
-
-                    StoredDirectMsg stoDM;
-                    stoDM.m_fromMe  = false;
-                    stoDM.m_text    = textOut;
-                    stoDM.m_utcTime = post->dict_find_int_value("time");;
-
-                    LOCK(cs_twister);
-                    // store this dm in memory list, but prevent duplicates
-                    std::vector<StoredDirectMsg> &dmsFromToUser = m_users[item.second.username].m_directmsg[n];
-                    std::vector<StoredDirectMsg>::iterator it;
-                    for( it = dmsFromToUser.begin(); it != dmsFromToUser.end(); ++it ) {
-                        if( stoDM.m_utcTime == (*it).m_utcTime &&
-                            stoDM.m_text    == (*it).m_text &&
-                            stoDM.m_fromMe  == (*it).m_fromMe ) {
-                            break;
-                        }
-                        if( stoDM.m_utcTime < (*it).m_utcTime && !(*it).m_fromMe) {
-                            dmsFromToUser.insert(it, stoDM);
-                            break;
-                        }
-                    }
-                    if( it == dmsFromToUser.end() ) {
-                        dmsFromToUser.push_back(stoDM);
-                    }
-
-                    result = true;
-                    break;
-                }
-            }
-        }
-
-        lazy_entry const* dmSelf = dm->dict_find_dict("s");
-        if( dmSelf ) {
-            std::string username = post->dict_find_string_value("n");
-
-            CKeyID keyID;
-            if( pwalletMain->GetKeyIdFromUsername(username, keyID) ) {
-                CKey key;
-                if (!pwalletMain->GetKey(keyID, key)) {
-                    printf("acceptSignedPost: private key not available trying to decrypt DM.\n");
-                } else {
-                    sec.key = dmSelf->dict_find_string_value("key");
-                    sec.mac = dmSelf->dict_find_string_value("mac");
-                    sec.orig = dmSelf->dict_find_int_value("orig");
-                    sec.body = dmSelf->dict_find_string_value("body");
-
+                BOOST_FOREACH(const ecies_secure_t& sec, secList)
+                {
                     std::string textOut;
                     if( key.Decrypt(sec, textOut) ) {
-                        int pos = textOut.find(' ');
-                        if( pos == std::string::npos ) {
-                            printf("acceptSignedPost: wrong private message format.\n");
-                        } else {
-                            std::string strTo  = textOut.substr(0, pos);
-                            std::string strMsg = textOut.substr(pos+1);
+                        /* this printf is good for debug, but bad for security.
+                        printf("Received DM for user '%s' text = '%s'\n",
+                               item.second.username.c_str(),
+                               textOut.c_str());
+                        */
 
-                            StoredDirectMsg stoDM;
-                            stoDM.m_fromMe  = true;
-                            stoDM.m_text    = strMsg;
-                            stoDM.m_utcTime = post->dict_find_int_value("time");
+                        std::string addressee = item.second.username;
+                        std::string recipient = addressee;
 
-                            LOCK(cs_twister);
-                            // store this dm in memory list, but prevent duplicates
-                            std::vector<StoredDirectMsg> &dmsFromToUser = m_users[username].m_directmsg[strTo];
-                            std::vector<StoredDirectMsg>::iterator it;
-                            for( it = dmsFromToUser.begin(); it != dmsFromToUser.end(); ++it ) {
-                                if( stoDM.m_utcTime == (*it).m_utcTime &&
-                                    stoDM.m_text    == (*it).m_text &&
-                                    stoDM.m_fromMe  == (*it).m_fromMe ) {
-                                    break;
-                                }
-                                if( stoDM.m_utcTime < (*it).m_utcTime) {
-                                    dmsFromToUser.insert(it, stoDM);
-                                    break;
-                                }
-                            }
-                            if( it == dmsFromToUser.end() ) {
-                                dmsFromToUser.push_back(stoDM);
+                        if( !oldFormat ) {
+                            lazy_entry v;
+                            int pos;
+                            libtorrent::error_code ec;
+                            if (lazy_bdecode(textOut.data(), textOut.data()+textOut.size(), v, ec, &pos) == 0) {
+                                textOut = v.dict_find_string_value("msg");
+                                recipient = v.dict_find_string_value("to");
                             }
                         }
+
+                        StoredDirectMsg stoDM;
+                        stoDM.m_text    = textOut;
+                        stoDM.m_utcTime = utcTime;
+
+                        if( addressee == sender ) {
+                            stoDM.m_fromMe  = true;
+                        } else if( addressee == recipient ) {
+                            stoDM.m_fromMe  = false;
+                        } else {
+                            // wrong data
+                            continue;
+                        }
+
+                        LOCK(cs_twister);
+                        // store this dm in memory list, but prevent duplicates
+                        std::vector<StoredDirectMsg> &dmsFromToUser = m_users[addressee].m_directmsg[stoDM.m_fromMe ? recipient : sender];
+                        std::vector<StoredDirectMsg>::iterator it;
+                        for( it = dmsFromToUser.begin(); it != dmsFromToUser.end(); ++it ) {
+                            if( stoDM.m_utcTime == (*it).m_utcTime &&
+                                stoDM.m_text    == (*it).m_text &&
+                                stoDM.m_fromMe  == (*it).m_fromMe ) {
+                                break;
+                            }
+                            if( stoDM.m_utcTime < (*it).m_utcTime ) {
+                                dmsFromToUser.insert(it, stoDM);
+                                break;
+                            }
+                        }
+                        if( it == dmsFromToUser.end() ) {
+                            dmsFromToUser.push_back(stoDM);
+                        }
+
+                        result = true;
+                        break;
                     }
                 }
             }
@@ -1816,17 +1806,36 @@ Value newdirectmsg(const Array& params, bool fHelp)
     string strMsg      = params[3].get_str();
 
     entry dm;
-    if( !createDirectMessage(dm, strTo, strMsg) )
+    entry *dm1, *dm2;
+    if( rand() < (RAND_MAX/2) ) {
+        dm1 = &dm["1"];
+        dm2 = &dm["2"];
+    } else {
+        dm2 = &dm["1"];
+        dm1 = &dm["2"];
+    }
+
+    entry msgData;
+    msgData["s"] = std::rand();
+    msgData["m"] = strMsg;
+    msgData["n"] = strTo;
+
+    std::vector<char> buf;
+
+    bencode(std::back_inserter(buf), msgData);
+    std::string strMsgData = std::string(buf.data(),buf.size());
+
+    if( !createDirectMessage(*dm1, strTo, strMsgData) )
         throw JSONRPCError(RPC_INTERNAL_ERROR,
                            "error encrypting to pubkey of destination user");
 
-    entry dmSelf;
-    string strToAndMsg = strTo + " " + strMsg;
-    if( !createDirectMessage(dmSelf, strFrom, strToAndMsg) )
+    msgData["s"] = std::rand();
+    bencode(std::back_inserter(buf), msgData);
+    strMsgData = std::string(buf.data(),buf.size());
+
+    if( !createDirectMessage(*dm2, strFrom, strMsgData))
         throw JSONRPCError(RPC_INTERNAL_ERROR,
                            "error encrypting to pubkey of source user");
-
-    dm["s"] = dmSelf;
 
     entry v;
     if( !createSignedUserpost(v, strFrom, k, "",
@@ -1834,7 +1843,6 @@ Value newdirectmsg(const Array& params, bool fHelp)
                               std::string(""), 0) )
         throw JSONRPCError(RPC_INTERNAL_ERROR,"error signing post with private key of user");
 
-    std::vector<char> buf;
     bencode(std::back_inserter(buf), v);
 
     std::string errmsg;
