@@ -59,6 +59,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/copy_ptr.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/policy.hpp" // for policy::peer
+#include "libtorrent/torrent_pieces.hpp"
 
 namespace libtorrent
 {
@@ -348,7 +349,7 @@ namespace libtorrent
 
 		bool is_i2p() const { return m_i2p; }
 
-		int piece_size(int index) const { return m_files.piece_size(index); }
+		int piece_size(int index) const { return m_torrent_pieces->piece_size(index); }
 
 		sha1_hash hash_for_piece(int index) const
 		{ return sha1_hash(hash_for_piece_ptr(index)); }
@@ -507,6 +508,8 @@ namespace libtorrent
 		// features are disabled for this torrent (unless the
 		// settings allows mixing i2p peers with regular peers)
 		bool m_i2p:1;
+
+		boost::intrusive_ptr<torrent_pieces> m_torrent_pieces;
 	};
 
 }

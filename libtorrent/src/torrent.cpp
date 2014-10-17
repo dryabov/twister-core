@@ -435,7 +435,10 @@ namespace libtorrent
 	{
         if (!p.name.empty()) m_name.reset(new std::string(p.name));
 
-        // if there is resume data already, we don't need to trigger the initial save
+		m_picker->m_torrent_pieces = m_torrent_pieces;
+		m_torrent_file->m_torrent_pieces = m_torrent_pieces;
+
+		// if there is resume data already, we don't need to trigger the initial save
 		// resume data
 		if (!p.resume_data.empty() && (p.flags & add_torrent_params::flag_override_resume_data) == 0)
 			m_need_save_resume_data = false;
@@ -923,7 +926,7 @@ namespace libtorrent
 
 		max_id = std::min( max_id, m_picker->last_have() );
 
-		int piece_size = m_torrent_file->piece_size(0);
+		int piece_size = 1 << 13; //m_torrent_file->piece_size(0);
 
 		for( int i = max_id; i >= 0 && i > since_id && (*reqs) < count; i--) {
 			if( m_picker->have_piece(i) &&
@@ -950,6 +953,8 @@ namespace libtorrent
 
 		if (ret > 0) {
 			pieces->push_back( std::string(j.buffer, ret));
+			int piece_size = ret;
+			m_torrent_pieces->set_piece_size(j.piece, piece_size);
 		} else {
 			printf("piece read error (database corrupt?) - setting we_dont_have(%d)\n", j.piece);
 			we_dont_have(j.piece);
@@ -1158,6 +1163,7 @@ namespace libtorrent
 
 		TORRENT_ASSERT(piece >= 0 && piece < m_torrent_file->num_pieces());
 		int piece_size = size;
+		int blocks_in_piece = (piece_size + block_size() - 1) / block_size();
 
 		// avoid crash trying to access the picker when there is none
 		if (!has_picker()) return;
@@ -1166,26 +1172,31 @@ namespace libtorrent
 			&& (flags & torrent::overwrite_existing) == 0)
 			return;
 
+		m_torrent_pieces->set_piece_size(piece, piece_size);
+
 		peer_request p;
 		p.piece = piece;
 		p.start = 0;
 		picker().inc_refcount(piece, 0);
-
-		p.length = piece_size;
-		char* buffer = m_ses.allocate_disk_buffer("add piece");
-		// out of memory
-		if (buffer == 0)
+		for (int i = 0; i < blocks_in_piece; ++i, p.start += block_size())
 		{
-			picker().dec_refcount(piece, 0);
-			return;
+			p.length = (std::min)(piece_size - p.start, int(block_size()));
+			char* buffer = m_ses.allocate_disk_buffer("add piece");
+			// out of memory
+			if (buffer == 0)
+			{
+				picker().dec_refcount(piece, 0);
+				return;
+			}
+			disk_buffer_holder holder(m_ses, buffer);
+			std::memcpy(buffer, data + p.start, p.length);
+			filesystem().async_write(p, holder, boost::bind(&torrent::on_disk_write_complete
+					, shared_from_this(), _1, _2, p));
+
+			piece_block block(piece, i);
+			picker().mark_as_downloading(block, 0, piece_picker::fast);
+			picker().mark_as_writing(block, 0);
 		}
-		disk_buffer_holder holder(m_ses, buffer);
-		std::memcpy(buffer, data + p.start, p.length);
-		filesystem().async_write(p, holder, boost::bind(&torrent::on_disk_write_complete
-				, shared_from_this(), _1, _2, p));
-		piece_block block(piece, 0);
-		picker().mark_as_downloading(block, 0, piece_picker::fast);
-		picker().mark_as_writing(block, 0);
 
 		async_verify_piece(piece, boost::bind(&torrent::piece_finished
 		  , shared_from_this(), piece, _1, _2, p.length));

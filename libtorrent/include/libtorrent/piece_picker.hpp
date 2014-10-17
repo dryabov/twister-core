@@ -52,6 +52,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/config.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/time.hpp"
+#include "libtorrent/torrent_pieces.hpp"
 
 // #define TORRENT_DEBUG_REFCOUNTS
 
@@ -392,7 +393,7 @@ namespace libtorrent
 		};
 
 		int blocks_in_last_piece() const
-		{ return m_blocks_in_last_piece; }
+		{ return m_torrent_pieces->blocks_in_last_piece(); }
 
 		std::pair<int, int> distributed_copies() const;
 
@@ -600,15 +601,12 @@ namespace libtorrent
 
 		// this holds the information of the
 		// blocks in partially downloaded pieces.
-		// the first m_blocks_per_piece entries
-		// in the vector belongs to the first
-		// entry in m_downloads, the second
-		// m_blocks_per_piece entries to the
+		// the first entry in the vector belongs to the first
+		// entry in m_downloads, the second entry to the
 		// second entry in m_downloads and so on.
-		std::vector<block_info> m_block_info;
+		std::vector<std::vector<block_info> > m_block_info;
 
-		int m_blocks_per_piece;
-		int m_blocks_in_last_piece;
+		boost::intrusive_ptr<torrent_pieces> m_torrent_pieces;
 
 		// the number of filtered pieces that we don't already
 		// have. total_number_of_pieces - number_of_pieces_we_have

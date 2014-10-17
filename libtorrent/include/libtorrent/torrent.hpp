@@ -75,6 +75,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/aux_/session_impl.hpp"
 #include "libtorrent/deadline_timer.hpp"
 #include "libtorrent/union_endpoint.hpp"
+#include "libtorrent/torrent_pieces.hpp"
 
 #if TORRENT_COMPLETE_TYPES_REQUIRED
 #include "libtorrent/peer_connection.hpp"
@@ -891,6 +892,11 @@ namespace libtorrent
 		boost::asio::ssl::context* ssl_ctx() const { return m_ssl_ctx.get(); } 
 #endif
 
+		int piece_size(const int index)
+		{
+			return m_torrent_pieces->piece_size(index);
+		}
+
 	private:
 
 		void on_files_deleted(int ret, disk_io_job const& j);
@@ -1399,6 +1405,8 @@ namespace libtorrent
 		// in the session.
 		bool m_is_active_download:1;
 		bool m_is_active_finished:1;
+
+		boost::intrusive_ptr<torrent_pieces> m_torrent_pieces;
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 	public:

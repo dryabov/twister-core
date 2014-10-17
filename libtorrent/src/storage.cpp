@@ -403,16 +403,29 @@ namespace libtorrent
         TORRENT_ASSERT(slot >= 0);
         TORRENT_ASSERT(slot < m_files.num_pieces());
         TORRENT_ASSERT(num_bufs == 1);
-        TORRENT_ASSERT(offset == 0);
+//        TORRENT_ASSERT(offset == 0);
 
-        std::string postStr(static_cast<char *>(bufs[0].iov_base), bufs[0].iov_len);
+        size_t total_size = 0;
+        for( int i = 0; i < num_bufs; i++ ) {
+            total_size += bufs[i].iov_len;
+        }
 
         int tries = 2;
         while( tries-- ) {
             try {
                 std::pair<std::string, int> pathSlot = std::make_pair(m_db_path, slot);
-                if( m_db.Write(std::make_pair('p', pathSlot), postStr) ) {
-                    return postStr.size();
+                std::string prevStr;
+                m_db.Read(std::make_pair('p', pathSlot), prevStr);
+                if( prevStr.size() < offset + total_size ) {
+                    prevStr.resize(offset + total_size);
+                }
+                size_t pos = offset;
+                for( int i = 0; i < num_bufs; i++ ) {
+                    prevStr.replace(pos, bufs[i].iov_len, (char*)bufs[i].iov_base, bufs[i].iov_len);
+                    pos += bufs[i].iov_len;
+                }
+                if( m_db.Write(std::make_pair('p', pathSlot), prevStr) ) {
+                    return pos - offset;
                 } else {
                     return -1;
                 }
@@ -420,7 +433,6 @@ namespace libtorrent
                 m_db.RepairDB();
             }
         }
-
 	}
 
 	size_type default_storage::physical_offset(int slot, int offset)
@@ -445,7 +457,8 @@ namespace libtorrent
         TORRENT_ASSERT(slot >= 0);
         TORRENT_ASSERT(slot < m_files.num_pieces());
         TORRENT_ASSERT(num_bufs == 1);
-        TORRENT_ASSERT(offset == 0);
+        TORRENT_ASSERT(offset >= 0);
+        TORRENT_ASSERT(num_bufs > 0);
 
         int tries = 2;
         while( tries-- ) {
@@ -453,9 +466,17 @@ namespace libtorrent
                 std::string postStr;
                 std::pair<std::string, int> pathSlot = std::make_pair(m_db_path, slot);
                 if( m_db.Read(std::make_pair('p', pathSlot), postStr) ) {
-                    TORRENT_ASSERT(bufs[0].iov_len >= postStr.size());
-                    memcpy(bufs[0].iov_base, postStr.data(), postStr.size());
-                    return postStr.size();
+                    size_t post_size = postStr.size();
+                    size_t pos = offset;
+                    for( int i = 0; i < num_bufs; i++ ) {
+                        size_t size = std::min(bufs[i].iov_len, post_size - pos);
+                        if( size < 0 ) {
+                            return pos - offset;
+                        }
+                        memcpy(bufs[i].iov_base, postStr.data() + pos, size);
+                        pos += size;
+                    }
+                    return pos - offset;
                 } else {
                     return 0;
                 }

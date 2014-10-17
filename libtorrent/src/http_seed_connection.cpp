@@ -152,7 +152,7 @@ namespace libtorrent
 
 		int size = r.length;
 		const int block_size = t->block_size();
-		const int piece_size = t->torrent_file().piece_length();
+		const int piece_size = t->piece_size(r.piece);
 		peer_request pr;
 		while (size > 0)
 		{
@@ -177,7 +177,7 @@ namespace libtorrent
 
 		// if we're requesting less than an entire piece we need to
 		// add ranges
-		if (r.start > 0 || r.length != t->torrent_file().piece_size(r.piece))
+		if (r.start > 0 || r.length != t->piece_size(r.piece))
 		{
 			request += "&ranges=";
 			request += to_string(r.start).elems;

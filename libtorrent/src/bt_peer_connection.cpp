@@ -860,8 +860,7 @@ namespace libtorrent
 				// m_outsanding_bytes
 				if (r.piece == t->torrent_file().num_pieces() - 1)
 				{
-					r.length = (std::min)(t->torrent_file().piece_size(
-						r.piece) - r.start, r.length);
+					r.length = (std::min)(t->piece_size(r.piece) - r.start, r.length);
 				}
 				incoming_reject_request(r);
 			}
