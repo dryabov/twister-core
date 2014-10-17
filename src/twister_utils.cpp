@@ -265,6 +265,12 @@ void hexcapePost(libtorrent::entry &e)
                         findAndHexcape(dm,"mac");
                     }
                 }
+                if( userpost.find_key("f") ) {
+                    entry &file = userpost["f"];
+                    if( file.type() == libtorrent::entry::dictionary_t ) {
+                        findAndHexcape(file,"sig");
+                    }
+                }
             }
         }
     }
@@ -284,6 +290,12 @@ void unHexcapePost(libtorrent::entry &e)
                         findAndUnHexcape(dm,"body");
                         findAndUnHexcape(dm,"key");
                         findAndUnHexcape(dm,"mac");
+                    }
+                }
+                if( userpost.find_key("f") ) {
+                    entry &file = userpost["f"];
+                    if( file.type() == libtorrent::entry::dictionary_t ) {
+                        findAndUnHexcape(file,"sig");
                     }
                 }
             }

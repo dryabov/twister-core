@@ -57,6 +57,7 @@ static map<std::string, bool> m_specialResources;
 enum ExpireResType { SimpleNoExpire, NumberedNoExpire, PostNoExpireRecent };
 static map<std::string, ExpireResType> m_noExpireResources;
 static map<std::string, torrent_handle> m_userTorrent;
+static map<std::string, torrent_handle> m_dataTorrent;
 static boost::scoped_ptr<CLevelDB> m_swarmDb;
 static int m_threadsToJoin;
 
@@ -166,6 +167,35 @@ torrent_handle startTorrentUser(std::string const &username, bool following)
         m_userTorrent[username].auto_managed(false);
         m_userTorrent[username].resume();
     }
+
+    if( following && !m_dataTorrent.count(username) ) {
+        std::string dataname = "@" + username;
+        sha1_hash ih = dhtTargetHash(dataname, "tracker", "m");
+
+        printf("adding torrent for [%s,tracker]\n", dataname.c_str());
+        add_torrent_params tparams;
+        tparams.info_hash = ih;
+        tparams.name = dataname;
+        tparams.default_priority = 0;
+        boost::filesystem::path torrentPath = GetDataDir() / "files";
+        tparams.save_path= torrentPath.string();
+        boost::system::error_code ec;
+        boost::filesystem::create_directory(torrentPath, ec);
+        if (ec) {
+            fprintf(stderr, "failed to create directory '%s': %s\n", torrentPath.string().c_str(), ec.message().c_str());
+        }
+        std::string filename = combine_path(tparams.save_path, to_hex(ih.to_string()) + ".resume");
+        load_file(filename.c_str(), tparams.resume_data);
+
+        m_dataTorrent[username] = ses->add_torrent(tparams);
+        m_dataTorrent[username].force_dht_announce();
+    }
+    if( following ) {
+        m_dataTorrent[username].set_following(true);
+        m_dataTorrent[username].auto_managed(false);
+        m_dataTorrent[username].resume();
+    }
+
     return m_userTorrent[username];
 }
 
@@ -174,6 +204,15 @@ torrent_handle getTorrentUser(std::string const &username)
     LOCK(cs_twister);
     if( m_userTorrent.count(username) )
         return m_userTorrent[username];
+    else
+        return torrent_handle();
+}
+
+torrent_handle getTorrentData(std::string const &username)
+{
+    LOCK(cs_twister);
+    if( m_dataTorrent.count(username) )
+        return m_dataTorrent[username];
     else
         return torrent_handle();
 }
@@ -1204,6 +1243,11 @@ bool acceptSignedPost(char const *data, int data_size, std::string username, int
                             (*flags) |= USERPOST_FLAG_DM;
                             processReceivedDM(post);
                         }
+
+                        lazy_entry const* file = post->dict_find_dict("f");
+                        if( file && flags ) {
+                            (*flags) |= USERPOST_FLAG_FILE;
+                        }
                     }
                 }
             }
@@ -1717,9 +1761,9 @@ int findLastPublicPostLocalUser( std::string strUsername )
 
 Value newpostmsg(const Array& params, bool fHelp)
 {
-    if (fHelp || (params.size() != 3 && params.size() != 5))
+    if (fHelp || (params.size() < 3 || params.size() > 6))
         throw runtime_error(
-            "newpostmsg <username> <k> <msg> [reply_n] [reply_k]\n"
+            "newpostmsg <username> <k> <msg> [reply_n] [reply_k] [file]\n"
             "Post a new message to swarm");
 
     EnsureWalletIsUnlocked();
@@ -1731,10 +1775,19 @@ Value newpostmsg(const Array& params, bool fHelp)
 
     string strReplyN, strReplyK;
     int replyK = 0;
-    if( params.size() == 5 ) {
+    if( params.size() >= 5 ) {
         strReplyN  = params[3].get_str();
         replyK = params[4].get_int();
         strReplyK = boost::lexical_cast<std::string>(replyK);
+    }
+
+    bool bAddFile = ( params.size() == 4 || params.size() == 6 );
+
+    entry file;
+    if( bAddFile ) {
+        file = jsonToEntry(params[params.size()-1].get_obj());
+        if( !file.find_key("name") || !file.find_key("data") || !file.find_key("format") )
+            throw JSONRPCError(RPC_INTERNAL_ERROR,"error in file data format");
     }
 
     entry v;
@@ -1742,6 +1795,31 @@ Value newpostmsg(const Array& params, bool fHelp)
     int lastk = findLastPublicPostLocalUser(strUsername);
     if( lastk >= 0 )
         v["userpost"]["lastk"] = lastk;
+
+    std::string strData;
+    if( bAddFile ) {
+        entry &vFile = v["userpost"]["f"];
+        // @TODO: limit filename length
+        vFile["n"] = file["name"].string();
+
+        std::string strFormat = file["format"].string();
+        strData               = file["data"].string();
+        if( strFormat == "binary" ) {
+            // keep strData
+        } else if( strFormat == "base64" ) {
+            strData = DecodeBase64(strData);
+        } else if( strFormat == "hex" ) {
+            vector<unsigned char> vch = ParseHex(strData);
+            strData = string((const char *)vch.data(), vch.size());
+        }
+        // @TODO: limit filesize to 128Mb (maximum piece size in torrent, 2^13*16Kb)
+        vFile["s"] = strData.size();
+
+        std::string sig = createSignature(strData, strUsername);
+        if( sig.size() == 0 )
+            throw JSONRPCError(RPC_INTERNAL_ERROR,"error signing data with private key of user");
+        vFile["sig"] = sig;
+    }
 
     if( !createSignedUserpost(v, strUsername, k, strMsg,
                          NULL, NULL, NULL,
@@ -1756,9 +1834,13 @@ Value newpostmsg(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMS,errmsg);
 
     torrent_handle h = startTorrentUser(strUsername, true);
-    if( h.is_valid() ) {
+    torrent_handle hd = getTorrentData(strUsername);
+    if( h.is_valid() && hd.is_valid() ) {
         // if member of torrent post it directly
         h.add_piece(k,buf.data(),buf.size());
+        if( bAddFile ) {
+            hd.add_piece(k,strData.data(),strData.size());
+        }
     } else {
         // TODO: swarm resource forwarding not implemented
         dhtPutData(strUsername, "swarm", false,
