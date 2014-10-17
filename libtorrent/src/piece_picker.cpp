@@ -74,6 +74,7 @@ namespace libtorrent
 		, m_reverse_cursor(0)
 		, m_sparse_regions(1)
 		, m_dirty(false)
+		, m_default_priority(1)
 	{
 #ifdef TORRENT_PICKER_LOG
 		std::cerr << "new piece_picker" << std::endl;
@@ -140,6 +141,7 @@ namespace libtorrent
         // allocate the piece_map to cover all pieces
         // and make them invalid
         piece_pos empty(0, 0);
+        empty.piece_priority = m_default_priority;
         m_piece_map.resize(total_num_pieces, empty);
         m_reverse_cursor = int(m_piece_map.size());
 

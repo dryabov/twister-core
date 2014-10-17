@@ -94,6 +94,7 @@ namespace libtorrent
 			, max_connections(-1)
 			, upload_limit(-1)
 			, download_limit(-1)
+			, default_priority(1)
 		{
 		}
 
@@ -321,6 +322,8 @@ namespace libtorrent
 		int max_connections;
 		int upload_limit;
 		int download_limit;
+
+		uint32_t default_priority;
 	};
 }
 

@@ -647,6 +647,7 @@ namespace libtorrent
 		enum { max_pieces = (1 << 19) - 2 };
 #endif
 
+		uint32_t m_default_priority;
 	};
 }
 

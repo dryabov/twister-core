@@ -435,6 +435,7 @@ namespace libtorrent
 	{
         if (!p.name.empty()) m_name.reset(new std::string(p.name));
 
+		m_picker->m_default_priority = p.default_priority;
 		m_picker->m_torrent_pieces = m_torrent_pieces;
 		m_torrent_file->m_torrent_pieces = m_torrent_pieces;
 
