@@ -648,6 +648,8 @@ namespace libtorrent
 #endif
 
 		uint32_t m_default_priority;
+
+		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_torrent_pieces = pieces; }
 	};
 }
 

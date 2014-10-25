@@ -510,6 +510,9 @@ namespace libtorrent
 		bool m_i2p:1;
 
 		boost::intrusive_ptr<torrent_pieces> m_torrent_pieces;
+
+	public:
+		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_torrent_pieces = pieces; }
 	};
 
 }
