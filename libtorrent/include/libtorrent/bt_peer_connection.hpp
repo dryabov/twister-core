@@ -245,7 +245,9 @@ namespace libtorrent
 		void write_reject_request(peer_request const&);
 		void write_allow_fast(int piece);
 		void write_suggest(int piece);
-		
+
+		bool write_dont_have(int piece);
+
 		void on_connected();
 		void on_metadata();
 

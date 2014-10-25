@@ -2173,6 +2173,30 @@ namespace libtorrent
 
 					break;
 				}
+				case disk_io_job::remove:
+				{
+					mutex::scoped_lock l(m_piece_mutex);
+					INVARIANT_CHECK;
+
+					TORRENT_ASSERT(!j.storage->error());
+
+					int piece_size = j.storage->info()->piece_size(j.piece);
+					int blocks_in_piece = (piece_size + m_block_size - 1) / m_block_size;
+
+					l.unlock();
+					ret = j.storage->remove_impl(j.piece, blocks_in_piece);
+					l.lock();
+					if (ret < 0)
+					{
+						test_error(j);
+						break;
+					}
+					j.storage->clear_error();
+
+					TORRENT_ASSERT(!j.storage->error());
+
+					break;
+				}
 				case disk_io_job::cache_piece:
 				{
 					mutex::scoped_lock l(m_piece_mutex);

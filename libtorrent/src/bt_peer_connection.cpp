@@ -2243,6 +2243,27 @@ namespace libtorrent
 		send_buffer(msg, sizeof(msg));
 	}
 
+	bool bt_peer_connection::write_dont_have(int index)
+	{
+		INVARIANT_CHECK;
+		TORRENT_ASSERT(associated_torrent().lock()->valid_metadata());
+		TORRENT_ASSERT(index >= 0);
+		TORRENT_ASSERT(index < associated_torrent().lock()->torrent_file().num_pieces());
+		TORRENT_ASSERT(m_sent_handshake && m_sent_bitfield);
+
+		if( m_dont_have_id == 0 ) return false;
+
+		// dont send during handshake and disconnect
+		if (in_handshake() || is_disconnecting()) return true;
+
+		char msg[] = {0,0,0,6,msg_extended,m_dont_have_id,0,0,0,0};
+		char* ptr = msg + 6;
+		detail::write_int32(index, ptr);
+		send_buffer(msg, sizeof(msg));
+
+		return true;
+	}
+
 	void bt_peer_connection::write_piece(peer_request const& r, disk_buffer_holder& buffer)
 	{
 		INVARIANT_CHECK;

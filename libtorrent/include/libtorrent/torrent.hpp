@@ -185,7 +185,8 @@ namespace libtorrent
 		int seed_rank(session_settings const& s) const;
 
 		enum flags_t { overwrite_existing = 1 };
-        void add_piece(int piece, char const* data, int size, int flags = 0);
+		void add_piece(int piece, char const* data, int size, int flags = 0);
+		void remove_piece(int piece);
 		void on_disk_write_complete(int ret, disk_io_job const& j
 			, peer_request p);
 		void on_disk_cache_complete(int ret, disk_io_job const& j);

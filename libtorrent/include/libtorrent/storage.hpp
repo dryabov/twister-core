@@ -105,6 +105,7 @@ namespace libtorrent
 
 		virtual int readv(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags = file::random_access);
 		virtual int writev(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags = file::random_access);
+		virtual bool removev(int slot, int num_blocks, int flags = file::random_access);
 
 		virtual void hint_read(int, int, int) {}
 		// negative return value indicates an error
@@ -200,6 +201,7 @@ namespace libtorrent
 		void hint_read(int slot, int offset, int len);
 		int readv(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags = file::random_access);
 		int writev(file::iovec_t const* buf, int slot, int offset, int num_bufs, int flags = file::random_access);
+		bool removev(int slot, int num_blocks, int flags = file::random_access);
 		size_type physical_offset(int slot, int offset);
 		bool move_slot(int src_slot, int dst_slot);
 		bool swap_slots(int slot1, int slot2);
@@ -266,6 +268,7 @@ namespace libtorrent
 		size_type physical_offset(int, int) { return 0; }
 		int readv(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags = file::random_access);
 		int writev(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags = file::random_access);
+		bool removev(int slot, int num_blocks, int flags = file::random_access);
 		bool move_slot(int, int) { return false; }
 		bool swap_slots(int, int) { return false; }
 		bool swap_slots3(int, int, int) { return false; }
@@ -348,6 +351,10 @@ namespace libtorrent
 		int async_write(
 			peer_request const& r
 			, disk_buffer_holder& buffer
+			, boost::function<void(int, disk_io_job const&)> const& f);
+
+		void async_remove(
+			peer_request const& r
 			, boost::function<void(int, disk_io_job const&)> const& f);
 
 		void async_hash(int piece, boost::function<void(int, disk_io_job const&)> const& f);
@@ -443,6 +450,8 @@ namespace libtorrent
 			, int piece_index
 			, int offset
 			, int num_bufs);
+
+		int remove_impl(int piece_index, int blocks_in_piece);
 
 		size_type physical_offset(int piece_index, int offset);
 

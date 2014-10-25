@@ -1204,6 +1204,38 @@ namespace libtorrent
 		picker().dec_refcount(piece, 0);
 	}
 
+	void torrent::remove_piece(int piece)
+	{
+		TORRENT_ASSERT(m_ses.is_network_thread());
+		TORRENT_ASSERT(piece >= 0 && piece < m_torrent_file->num_pieces());
+
+		// avoid crash trying to access the picker when there is none
+		if (!has_picker()) return;
+
+		if (!picker().have_piece(piece))
+			return;
+
+		picker().we_dont_have(piece);
+
+		for (std::set<peer_connection*>::iterator it = m_connections.begin(); it != m_connections.end(); ++it) {
+			peer_connection* peer = *it;
+			if (peer->type() == peer_connection::bittorrent_connection) {
+				bt_peer_connection* bt_peer = (bt_peer_connection*) peer;
+				bt_peer->write_dont_have(piece);
+			} else {
+				peer->disconnect(errors::no_error);
+			}
+		}
+
+		peer_request p;
+		p.piece = piece;
+		p.start = 0;
+		p.length = 0;
+
+		filesystem().async_remove(p, boost::bind(&nop));
+
+	}
+
 	void torrent::on_disk_write_complete(int ret, disk_io_job const& j
 		, peer_request p)
 	{

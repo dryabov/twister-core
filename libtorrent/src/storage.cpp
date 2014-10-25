@@ -146,6 +146,12 @@ namespace libtorrent
 		return ret;
 	}
 
+	bool storage_interface::removev(int slot, int num_blocks, int flags)
+	{
+		int ret = 0;
+		return ret;
+	}
+
 	int copy_bufs(file::iovec_t const* bufs, int bytes, file::iovec_t* target)
 	{
 		int size = 0;
@@ -435,6 +441,23 @@ namespace libtorrent
         }
 	}
 
+    bool default_storage::removev(int slot, int num_blocks, int flags)
+    {
+        TORRENT_ASSERT(slot >= 0);
+        TORRENT_ASSERT(slot < m_files.num_pieces());
+
+        int tries = 2;
+        while( tries-- ) {
+            try {
+                std::pair<std::string, int> pathSlot = std::make_pair(m_db_path, slot);
+                return m_db.Erase(std::make_pair('p', pathSlot));
+            } catch( leveldb_error &e ) {
+                m_db.RepairDB();
+            }
+        }
+        return false;
+    }
+
 	size_type default_storage::physical_offset(int slot, int offset)
 	{
 		TORRENT_ASSERT(slot >= 0);
@@ -563,6 +586,11 @@ namespace libtorrent
 		}
 #endif
 		return ret;
+	}
+
+	bool disabled_storage::removev(int slot, int num_blocks, int flags)
+	{
+		return false;
 	}
 
 	storage_interface* disabled_storage_constructor(file_storage const& fs
@@ -777,6 +805,17 @@ namespace libtorrent
 		return queue_size;
 	}
 
+	void piece_manager::async_remove(
+		peer_request const& r
+		, boost::function<void(int, disk_io_job const&)> const& handler)
+	{
+		disk_io_job j;
+		j.storage = this;
+		j.action = disk_io_job::remove;
+		j.piece = r.piece;
+		m_io_thread.add_job(j, handler);
+	}
+
 	void piece_manager::async_hash(int piece
 		, boost::function<void(int, disk_io_job const&)> const& handler)
 	{
@@ -880,6 +919,17 @@ namespace libtorrent
 
 		if (m_storage->settings().disable_hash_checks) return ret;
 		
+		return ret;
+	}
+
+	int piece_manager::remove_impl(int piece_index, int blocks_in_piece)
+	{
+		TORRENT_ASSERT(blocks_in_piece > 0);
+		TORRENT_ASSERT(piece_index >= 0 && piece_index < m_files.num_pieces());
+
+		int slot = allocate_slot_for_piece(piece_index);
+		int ret = m_storage->removev(slot, blocks_in_piece);
+
 		return ret;
 	}
 

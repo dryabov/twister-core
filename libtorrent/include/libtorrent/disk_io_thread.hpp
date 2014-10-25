@@ -119,6 +119,7 @@ namespace libtorrent
 #ifndef TORRENT_NO_DEPRECATE
 			, finalize_file
 #endif
+			, remove
 		};
 
 		action_t action;
