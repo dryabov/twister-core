@@ -79,6 +79,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/gzip.hpp" // for inflate_gzip
 #include "libtorrent/random.hpp"
 #include "libtorrent/string_util.hpp" // for allocate_string_copy
+#include "libtorrent/io.hpp"
 
 #ifdef TORRENT_USE_OPENSSL
 #include "libtorrent/ssl_stream.hpp"
@@ -1876,6 +1877,27 @@ namespace libtorrent
 					{
 						if (pieces_str[i] & 1) we_have(i, pieces_str[i]>>1);
 						if (m_seed_mode && (pieces_str[i] & 2)) m_verified.set_bit(i);
+					}
+				}
+
+				lazy_entry const* piece_size = m_resume_entry.dict_find("piece_size");
+				if (piece_size && piece_size->type() == lazy_entry::string_t
+					&& int(piece_size->string_length()) == 4*m_torrent_file->num_pieces())
+				{
+					char const* piece_size_str = piece_size->string_ptr();
+					for (int i = 0, end(pieces->string_length()); i < end; ++i)
+					{
+						int size = detail::read_int32(piece_size_str);
+						m_torrent_pieces->set_piece_size(i, size);
+					}
+				}
+				else
+				{
+					int blocksize = block_size();
+					for (int i = 0, end(pieces->string_length()); i < end; ++i)
+					{
+						if (m_picker->have_piece(i))
+							m_torrent_pieces->set_piece_size(i, blocksize);
 					}
 				}
 
@@ -5319,6 +5341,12 @@ namespace libtorrent
 			for (int i = 0, end(pieces.size()); i < end; ++i)
 				pieces[i] = m_picker->have_piece(i) ? 1 + (m_picker->post_flags(i)<<1) : 0;
 		}
+
+		entry::string_type& piece_size = ret["piece_size"].string();
+		piece_size.resize(4 * pieces.size());
+		char* ptr = (char*) piece_size.data();
+		for (int i = 0, end(pieces.size()); i < end; ++i)
+			detail::write_int32(m_torrent_pieces->piece_size(i), ptr);
 
 		if (m_seed_mode)
 		{
