@@ -113,17 +113,12 @@ namespace libtorrent
 	{
 	public:
 
-		enum type_t {
-			twister_messages = 0,
-			twister_data = 1
-		};
-
 		torrent(aux::session_impl& ses, tcp::endpoint const& net_interface
 			, int block_size, int seq, add_torrent_params const& p
 			, sha1_hash const& info_hash);
 		~torrent();
 
-		type_t type() const { return m_type; }
+		torrent_info::type_t type() const { return m_type; }
 
 #ifndef TORRENT_DISABLE_ENCRYPTION
 		sha1_hash const& obfuscated_hash() const
@@ -900,10 +895,8 @@ namespace libtorrent
 		boost::asio::ssl::context* ssl_ctx() const { return m_ssl_ctx.get(); } 
 #endif
 
-		int piece_size(const int index)
-		{
-			return m_piece_size->get(index);
-		}
+		int piece_size(const int index) const
+		{ return m_piece_size->get(index); }
 
 	private:
 
@@ -948,7 +941,7 @@ namespace libtorrent
 		void remove_time_critical_pieces(std::vector<int> const& priority);
 		void request_time_critical_pieces();
 
-		type_t m_type;
+		torrent_info::type_t m_type;
 
 		policy m_policy;
 

@@ -437,7 +437,7 @@ namespace libtorrent
 	{
         if (!p.name.empty()) m_name.reset(new std::string(p.name));
 
-		m_picker->m_default_priority = (p.type == torrent::twister_messages) ? 1 : 0;
+		m_picker->m_default_priority = (p.type == torrent_info::twister_messages) ? 1 : 0;
 		m_picker->setPieces(m_piece_size);
 		m_torrent_file->setPieces(m_piece_size);
 		m_torrent_file->setType(m_type);

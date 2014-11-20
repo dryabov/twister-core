@@ -4615,11 +4615,11 @@ namespace libtorrent
 		bool accept =  false;
 		switch (j.storage->info()->type())
 		{
-		case torrent::type_t::twister_messages:
+		case torrent_info::twister_messages:
 			accept = acceptSignedPost(j.buffer, j.buffer_size,
 					j.storage->info()->name(), j.piece, errmsg, NULL);
 			break;
-		case torrent::type_t::twister_data:
+		case torrent_info::twister_data:
 			accept = acceptSignedFile(j.buffer, j.buffer_size,
 					j.storage->info()->name(), j.piece, errmsg);
 			break;

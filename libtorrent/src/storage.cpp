@@ -240,11 +240,11 @@ namespace libtorrent
             std::string errmsg;
             switch (m_info->type())
             {
-            case torrent::type_t::twister_messages:
+            case torrent_info::twister_messages:
                 *hash_ok = acceptSignedPost((char const*)buf.iov_base, ret,
                         m_info->name(), slot, errmsg, post_flags);
                 break;
-            case torrent::type_t::twister_data:
+            case torrent_info::twister_data:
                 *hash_ok = acceptSignedFile((char const*)buf.iov_base, ret,
                         m_info->name(), slot, errmsg);
                 break;

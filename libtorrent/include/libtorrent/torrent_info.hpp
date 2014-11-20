@@ -241,6 +241,11 @@ namespace libtorrent
 	{
 	public:
 
+		enum type_t {
+			twister_messages = 0,
+			twister_data = 1
+		};
+
 #ifdef TORRENT_DEBUG
 		void check_invariant() const;
 #endif
@@ -511,12 +516,12 @@ namespace libtorrent
 		bool m_i2p:1;
 
 		boost::intrusive_ptr<torrent_pieces> m_piece_size;
-		torrent::type_t m_type;
+		torrent_info::type_t m_type;
 
 	public:
 		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_piece_size = pieces; }
-		void setType(torrent::type_t type) { m_type = type; }
-		torrent::type_t type() const { return m_type; }
+		void setType(torrent_info::type_t type) { m_type = type; }
+		torrent_info::type_t type() const { return m_type; }
 	};
 
 }

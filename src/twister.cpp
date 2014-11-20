@@ -145,7 +145,7 @@ torrent_handle startTorrentUser(std::string const &username, bool following)
 
         printf("adding torrent for [%s,tracker]\n", username.c_str());
         add_torrent_params tparams;
-        tparams.type = torrent::twister_messages;
+        tparams.type = torrent_info::twister_messages;
         tparams.info_hash = ih;
         tparams.name = username;
         boost::filesystem::path torrentPath = GetDataDir() / "swarm";
