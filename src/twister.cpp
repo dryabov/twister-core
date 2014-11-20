@@ -188,7 +188,7 @@ torrent_handle startTorrentData(std::string const &username)
 
         printf("adding torrent for [%s,tracker]\n", dataname.c_str());
         add_torrent_params tparams;
-        tparams.type = torrent::twister_data;
+        tparams.type = torrent_info::twister_data;
         tparams.info_hash = ih;
         tparams.name = dataname;
         boost::filesystem::path torrentPath = GetDataDir() / "files";
@@ -1278,7 +1278,7 @@ bool acceptSignedPost(char const *data, int data_size, std::string username, int
     return ret;
 }
 
-bool acceptSignedFile(char const *data, int data_size, std::string username, int seq, std::string sig, std::string &errmsg)
+bool acceptSignedFile(char const *data, int data_size, std::string username, int seq, std::string &errmsg)
 {
     bool ret = false;
     char errbuf[200]="";

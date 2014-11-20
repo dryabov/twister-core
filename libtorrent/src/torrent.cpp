@@ -5349,7 +5349,7 @@ namespace libtorrent
 		piece_size.resize(4 * pieces.size());
 		char* ptr = (char*) piece_size.data();
 		for (int i = 0, end(pieces.size()); i < end; ++i)
-			detail::write_int32(m_piece_size->piece_size(i), ptr);
+			detail::write_int32(m_piece_size->get(i), ptr);
 
 		if (m_seed_mode)
 		{

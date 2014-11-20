@@ -13,7 +13,7 @@ namespace libtorrent
 	{
 	public:
 		torrent_pieces(int block_size) : m_block_size(block_size) {};
-		~torrent_pieces();
+		~torrent_pieces() {};
 
 		int num_pieces() const
 		{
