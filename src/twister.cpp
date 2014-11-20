@@ -170,7 +170,19 @@ torrent_handle startTorrentUser(std::string const &username, bool following)
         m_userTorrent[username].resume();
     }
 
-    if( following && !m_dataTorrent.count(username) ) {
+    return m_userTorrent[username];
+}
+
+torrent_handle startTorrentData(std::string const &username)
+{
+    bool userInTxDb = usernameExists(username); // keep this outside cs_twister to avoid deadlock
+    boost::shared_ptr<session> ses(m_ses);
+    if( !userInTxDb || !ses )
+        return torrent_handle();
+
+    if( !m_dataTorrent.count(username) ) {
+        LOCK(cs_twister);
+
         std::string dataname = "@" + username;
         sha1_hash ih = dhtTargetHash(dataname, "tracker", "m");
 
@@ -192,14 +204,14 @@ torrent_handle startTorrentUser(std::string const &username, bool following)
 
         m_dataTorrent[username] = ses->add_torrent(tparams);
         m_dataTorrent[username].force_dht_announce();
-    }
-    if( following ) {
+
+        // @todo: to automanage or not to automanage?
         m_dataTorrent[username].set_following(true);
         m_dataTorrent[username].auto_managed(false);
         m_dataTorrent[username].resume();
     }
 
-    return m_userTorrent[username];
+    return m_dataTorrent[username];
 }
 
 torrent_handle getTorrentUser(std::string const &username)
@@ -456,6 +468,7 @@ void ThreadWaitExtIP()
     // now restart the user torrents
     BOOST_FOREACH(string username, torrentsToStart) {
         startTorrentUser(username, true);
+        startTorrentData(username);
     }
 }
 
@@ -1837,7 +1850,7 @@ Value newpostmsg(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMS,errmsg);
 
     torrent_handle h = startTorrentUser(strUsername, true);
-    torrent_handle hd = getTorrentData(strUsername);
+    torrent_handle hd = startTorrentData(strUsername);
     if( h.is_valid() && hd.is_valid() ) {
         // if member of torrent post it directly
         h.add_piece(k,buf.data(),buf.size());
@@ -2222,6 +2235,7 @@ Value follow(const Array& params, bool fHelp)
     for( unsigned int u = 0; u < users.size(); u++ ) {
         string username = users[u].get_str();
         torrent_handle h = startTorrentUser(username, true);
+        torrent_handle hd = startTorrentData(username);
 
         if( h.is_valid() ) {
             LOCK(cs_twister);
