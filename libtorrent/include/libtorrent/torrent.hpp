@@ -895,7 +895,7 @@ namespace libtorrent
 
 		int piece_size(const int index)
 		{
-			return m_torrent_pieces->piece_size(index);
+			return m_piece_size->get(index);
 		}
 
 	private:
@@ -1407,7 +1407,7 @@ namespace libtorrent
 		bool m_is_active_download:1;
 		bool m_is_active_finished:1;
 
-		boost::intrusive_ptr<torrent_pieces> m_torrent_pieces;
+		boost::intrusive_ptr<torrent_pieces> m_piece_size;
 
 #if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
 	public:

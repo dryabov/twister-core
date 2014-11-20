@@ -20,7 +20,7 @@ namespace libtorrent
 			return int(m_piece_size.size());
 		}
 
-		int piece_size(int index) const
+		int get(int index) const
 		{
 			TORRENT_ASSERT(index >= 0);
 			TORRENT_ASSERT(index < (int)m_piece_size.size() || m_piece_size.empty());
@@ -51,9 +51,9 @@ namespace libtorrent
 			TORRENT_ASSERT(m_piece_size.back() <= blocks_per_piece);
 		}
 
-		void set_piece_size(int piece, int size)
+		void set(int piece, int size)
 		{
-			if( piece >= (int)m_piece_size.size() ) {
+			if( piece >= (int) m_piece_size.size() ) {
 				m_piece_size.resize(piece + 1, 0);
 			}
 			m_piece_size[piece] = size;

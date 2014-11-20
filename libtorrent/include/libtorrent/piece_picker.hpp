@@ -393,7 +393,7 @@ namespace libtorrent
 		};
 
 		int blocks_in_last_piece() const
-		{ return m_torrent_pieces->blocks_in_last_piece(); }
+		{ return m_piece_size->blocks_in_last_piece(); }
 
 		std::pair<int, int> distributed_copies() const;
 
@@ -606,7 +606,7 @@ namespace libtorrent
 		// second entry in m_downloads and so on.
 		std::vector<std::vector<block_info> > m_block_info;
 
-		boost::intrusive_ptr<torrent_pieces> m_torrent_pieces;
+		boost::intrusive_ptr<torrent_pieces> m_piece_size;
 
 		// the number of filtered pieces that we don't already
 		// have. total_number_of_pieces - number_of_pieces_we_have
@@ -649,7 +649,7 @@ namespace libtorrent
 
 		uint32_t m_default_priority;
 
-		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_torrent_pieces = pieces; }
+		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_piece_size = pieces; }
 	};
 }
 

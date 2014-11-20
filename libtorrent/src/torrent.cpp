@@ -437,8 +437,8 @@ namespace libtorrent
         if (!p.name.empty()) m_name.reset(new std::string(p.name));
 
 		m_picker->m_default_priority = p.default_priority;
-		m_picker->setPieces(m_torrent_pieces);
-		m_torrent_file->setPieces(m_torrent_pieces);
+		m_picker->setPieces(m_piece_size);
+		m_torrent_file->setPieces(m_piece_size);
 
 		// if there is resume data already, we don't need to trigger the initial save
 		// resume data
@@ -956,7 +956,8 @@ namespace libtorrent
 		if (ret > 0) {
 			pieces->push_back( std::string(j.buffer, ret));
 			int piece_size = ret;
-			m_torrent_pieces->set_piece_size(j.piece, piece_size);
+			// @todo: check that piece is completed
+			m_piece_size->set(j.piece, piece_size);
 		} else {
 			printf("piece read error (database corrupt?) - setting we_dont_have(%d)\n", j.piece);
 			we_dont_have(j.piece);
@@ -1174,7 +1175,7 @@ namespace libtorrent
 			&& (flags & torrent::overwrite_existing) == 0)
 			return;
 
-		m_torrent_pieces->set_piece_size(piece, piece_size);
+		m_piece_size->set(piece, piece_size);
 
 		peer_request p;
 		p.piece = piece;
@@ -1888,7 +1889,7 @@ namespace libtorrent
 					for (int i = 0, end(pieces->string_length()); i < end; ++i)
 					{
 						int size = detail::read_int32(piece_size_str);
-						m_torrent_pieces->set_piece_size(i, size);
+						m_piece_size->set(i, size);
 					}
 				}
 				else
@@ -1897,7 +1898,7 @@ namespace libtorrent
 					for (int i = 0, end(pieces->string_length()); i < end; ++i)
 					{
 						if (m_picker->have_piece(i))
-							m_torrent_pieces->set_piece_size(i, blocksize);
+							m_piece_size->set(i, blocksize);
 					}
 				}
 
@@ -5346,7 +5347,7 @@ namespace libtorrent
 		piece_size.resize(4 * pieces.size());
 		char* ptr = (char*) piece_size.data();
 		for (int i = 0, end(pieces.size()); i < end; ++i)
-			detail::write_int32(m_torrent_pieces->piece_size(i), ptr);
+			detail::write_int32(m_piece_size->piece_size(i), ptr);
 
 		if (m_seed_mode)
 		{
