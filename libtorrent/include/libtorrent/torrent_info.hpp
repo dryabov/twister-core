@@ -60,6 +60,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/socket.hpp"
 #include "libtorrent/policy.hpp" // for policy::peer
 #include "libtorrent/torrent_pieces.hpp"
+#include "libtorrent/torrent.hpp"
 
 namespace libtorrent
 {
@@ -510,9 +511,12 @@ namespace libtorrent
 		bool m_i2p:1;
 
 		boost::intrusive_ptr<torrent_pieces> m_piece_size;
+		torrent::type_t m_type;
 
 	public:
 		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_piece_size = pieces; }
+		void setType(torrent::type_t type) { m_type = type; }
+		torrent::type_t type() { return m_type; }
 	};
 
 }

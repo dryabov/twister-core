@@ -34,6 +34,7 @@ twister::twister()
 #include "libtorrent/bencode.hpp"
 #include "libtorrent/session.hpp"
 #include "libtorrent/alert_types.hpp"
+#include "libtorrent/torrent.hpp"
 
 #define TORRENT_DISABLE_GEO_IP
 #include "libtorrent/aux_/session_impl.hpp"
@@ -144,10 +145,11 @@ torrent_handle startTorrentUser(std::string const &username, bool following)
 
         printf("adding torrent for [%s,tracker]\n", username.c_str());
         add_torrent_params tparams;
+        tparams.type = torrent::twister_messages;
         tparams.info_hash = ih;
         tparams.name = username;
         boost::filesystem::path torrentPath = GetDataDir() / "swarm";
-        tparams.save_path= torrentPath.string();
+        tparams.save_path = torrentPath.string();
         boost::system::error_code ec;
         boost::filesystem::create_directory(torrentPath, ec);
         if (ec) {
@@ -174,11 +176,12 @@ torrent_handle startTorrentUser(std::string const &username, bool following)
 
         printf("adding torrent for [%s,tracker]\n", dataname.c_str());
         add_torrent_params tparams;
+        tparams.type = torrent::twister_data;
         tparams.info_hash = ih;
         tparams.name = dataname;
         tparams.default_priority = 0;
         boost::filesystem::path torrentPath = GetDataDir() / "files";
-        tparams.save_path= torrentPath.string();
+        tparams.save_path = torrentPath.string();
         boost::system::error_code ec;
         boost::filesystem::create_directory(torrentPath, ec);
         if (ec) {

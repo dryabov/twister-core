@@ -433,12 +433,14 @@ namespace libtorrent
 		, m_in_state_updates(false)
 		, m_is_active_download(false)
 		, m_is_active_finished(false)
+		, m_type(p.type)
 	{
         if (!p.name.empty()) m_name.reset(new std::string(p.name));
 
 		m_picker->m_default_priority = p.default_priority;
 		m_picker->setPieces(m_piece_size);
 		m_torrent_file->setPieces(m_piece_size);
+		m_torrent_file->setType(m_type);
 
 		// if there is resume data already, we don't need to trigger the initial save
 		// resume data

@@ -113,10 +113,17 @@ namespace libtorrent
 	{
 	public:
 
+		enum type_t {
+			twister_messages = 0,
+			twister_data = 1
+		};
+
 		torrent(aux::session_impl& ses, tcp::endpoint const& net_interface
 			, int block_size, int seq, add_torrent_params const& p
 			, sha1_hash const& info_hash);
 		~torrent();
+
+		type_t type() const { return m_type; }
 
 #ifndef TORRENT_DISABLE_ENCRYPTION
 		sha1_hash const& obfuscated_hash() const
@@ -940,6 +947,8 @@ namespace libtorrent
 		void remove_time_critical_piece(int piece, bool finished = false);
 		void remove_time_critical_pieces(std::vector<int> const& priority);
 		void request_time_critical_pieces();
+
+		type_t m_type;
 
 		policy m_policy;
 
