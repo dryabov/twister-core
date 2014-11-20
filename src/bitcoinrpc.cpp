@@ -247,6 +247,7 @@ static const CRPCCommand vRPCCommands[] =
     { "dhtput",                 &dhtput,                 false,     true,       false },
     { "dhtget",                 &dhtget,                 false,     true,       true },
     { "newpostmsg",             &newpostmsg,             false,     true,       false },
+    { "getfile",                &getfile,                false,     true,       false },
     { "newdirectmsg",           &newdirectmsg,           false,     true,       false },
     { "newrtmsg",               &newrtmsg,               false,     true,       false },
     { "getposts",               &getposts,               false,     true,       false },
@@ -1299,6 +1300,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "dhtget"                 && n > 5) ConvertTo<boost::int64_t>(params[5]);
     if (strMethod == "newpostmsg"             && n > 1) ConvertTo<boost::int64_t>(params[1]);
     if (strMethod == "newpostmsg"             && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "getfile"                && n > 1) ConvertTo<boost::int64_t>(params[1]);
     if (strMethod == "newdirectmsg"           && n > 1) ConvertTo<boost::int64_t>(params[1]);
     if (strMethod == "newdirectmsg"           && n > 4) ConvertTo<bool>(params[4]);
     if (strMethod == "newrtmsg"               && n > 1) ConvertTo<boost::int64_t>(params[1]);

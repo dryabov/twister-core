@@ -1941,6 +1941,44 @@ Value newpostmsg(const Array& params, bool fHelp)
     return entryToJson(v);
 }
 
+Value getfile(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 2 || params.size() > 3 )
+        throw runtime_error(
+            "getfile <username> <k> [format]\n"
+            "Get file info/contents.");
+
+    string username = params[0].get_str();
+    int k           = params[1].get_int();
+    string format   = (params.size() > 2) ? params[2].get_str() : "binary";
+
+    torrent_handle hd = getTorrentData(username);
+    if( !hd.is_valid() )
+        throw JSONRPCError(RPC_INTERNAL_ERROR,
+                           "You are not follower of the requested user");
+
+    if( hd.have_piece(k) ) {
+       // @todo: use getfile for file status, actual download using /get/username/k/contentType
+        std::vector<std::string> pieces;
+        hd.get_pieces(pieces, 1, k, k-1, ~0);
+        entry v;
+        assert( pieces.size() == 1 );
+        // @todo: get & validate signature
+        if( format == "binary" ) {
+            v["data"] = pieces[0];
+        } else if( format == "base64" ) {
+            v["data"] = EncodeBase64(pieces[0]);
+        } else {
+            throw JSONRPCError(RPC_INTERNAL_ERROR,"unknown data format");
+        }
+        return entryToJson(v);
+    } else {
+        // @todo: return current downloaded size (# blocks/total blocks)
+        int total_size = hd.get_torrent_info().piece_size(k);
+        return Value();
+    }
+}
+
 Value newdirectmsg(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 4 || params.size() > 5 )
