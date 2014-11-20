@@ -94,7 +94,6 @@ namespace libtorrent
 			, max_connections(-1)
 			, upload_limit(-1)
 			, download_limit(-1)
-			, default_priority(1)
 			, type(torrent::twister_messages)
 		{
 		}
@@ -324,7 +323,6 @@ namespace libtorrent
 		int upload_limit;
 		int download_limit;
 
-		uint32_t default_priority;
 		torrent::type_t type;
 	};
 }

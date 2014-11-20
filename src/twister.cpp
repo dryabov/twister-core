@@ -191,7 +191,6 @@ torrent_handle startTorrentData(std::string const &username)
         tparams.type = torrent::twister_data;
         tparams.info_hash = ih;
         tparams.name = dataname;
-        tparams.default_priority = 0;
         boost::filesystem::path torrentPath = GetDataDir() / "files";
         tparams.save_path = torrentPath.string();
         boost::system::error_code ec;
