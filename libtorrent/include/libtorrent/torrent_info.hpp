@@ -516,7 +516,7 @@ namespace libtorrent
 	public:
 		void setPieces(boost::intrusive_ptr<torrent_pieces> &pieces) { m_piece_size = pieces; }
 		void setType(torrent::type_t type) { m_type = type; }
-		torrent::type_t type() { return m_type; }
+		torrent::type_t type() const { return m_type; }
 	};
 
 }

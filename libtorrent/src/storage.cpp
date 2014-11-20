@@ -238,8 +238,20 @@ namespace libtorrent
         if (ret > 0)
         {
             std::string errmsg;
-            *hash_ok = acceptSignedPost((char const*)buf.iov_base, ret,
-                                        m_info->name(), slot, errmsg, post_flags);
+            switch (m_info->type())
+            {
+            case torrent::type_t::twister_messages:
+                *hash_ok = acceptSignedPost((char const*)buf.iov_base, ret,
+                        m_info->name(), slot, errmsg, post_flags);
+                break;
+            case torrent::type_t::twister_data:
+                *hash_ok = acceptSignedFile((char const*)buf.iov_base, ret,
+                        m_info->name(), slot, errmsg);
+                break;
+            default:
+                TORRENT_ASSERT(false);
+                break;
+            }
         }
 
         if (error()) return 0;

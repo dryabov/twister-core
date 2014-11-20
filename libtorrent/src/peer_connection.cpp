@@ -4611,8 +4611,24 @@ namespace libtorrent
 #endif
 		// [MF] recheck piece just before sending (issue #15)
 		std::string errmsg;
-		if( acceptSignedPost(j.buffer, j.buffer_size, j.storage->info()->name(),
-				     j.piece, errmsg, NULL ) ) {
+
+		bool accept =  false;
+		switch (j.storage->info()->type())
+		{
+		case torrent::type_t::twister_messages:
+			accept = acceptSignedPost(j.buffer, j.buffer_size,
+					j.storage->info()->name(), j.piece, errmsg, NULL);
+			break;
+		case torrent::type_t::twister_data:
+			accept = acceptSignedFile(j.buffer, j.buffer_size,
+					j.storage->info()->name(), j.piece, errmsg);
+			break;
+		default:
+			TORRENT_ASSERT(false);
+			break;
+		}
+
+		if( accept ) {
 			write_piece(r, buffer);
 		} else {
 			printf("on_disk_read_complete: [piece: %d l: %d] failed! (%s)\n",

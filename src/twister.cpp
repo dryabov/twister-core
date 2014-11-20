@@ -1279,6 +1279,44 @@ bool acceptSignedPost(char const *data, int data_size, std::string username, int
     return ret;
 }
 
+bool acceptSignedFile(char const *data, int data_size, std::string username, int seq, std::string sig, std::string &errmsg)
+{
+    bool ret = false;
+    char errbuf[200]="";
+
+    torrent_handle h = startTorrentUser(username, false);
+    std::vector<std::string> pieces;
+    h.get_pieces(pieces, 1, seq, seq-1, ~0);
+    assert( pieces.size() == 1 );
+
+    const char* msg_data = pieces[0].data();
+    int msg_data_size = pieces[0].size();
+
+    lazy_entry v;
+    int pos;
+    libtorrent::error_code ec;
+    // @todo: store sig and height somewhere else [optimzation]
+    if (lazy_bdecode(msg_data, msg_data + msg_data_size, v, ec, &pos) == 0) {
+        if( v.type() == lazy_entry::dict_t ) {
+            lazy_entry const* post = v.dict_find_dict("userpost");
+            if( post ) {
+                lazy_entry const* f = post->dict_find_dict("f");
+                if( f ) {
+                    int height = post->dict_find_int_value("height",-1);
+                    std::string sig = f->dict_find_string_value("sig");
+                    ret = verifySignature(std::string(data,data_size), username, sig, height);
+                    if( !ret ) {
+                        sprintf(errbuf,"bad file signature");
+                    }
+                }
+            }
+        }
+    }
+
+    errmsg = errbuf;
+    return ret;
+}
+
 bool validatePostNumberForUser(std::string const &username, int k)
 {
     CTransaction txOut;

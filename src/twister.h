@@ -34,6 +34,7 @@ std::string createSignature(std::string const &strMessage, std::string const &st
 bool verifySignature(std::string const &strMessage, std::string const &strUsername, std::string const &strSign, int maxHeight = -1);
 
 bool acceptSignedPost(char const *data, int data_size, std::string username, int seq, std::string &errmsg, boost::uint32_t *flags);
+bool acceptSignedFile(char const *data, int data_size, std::string username, int seq, std::string &errmsg);
 bool validatePostNumberForUser(std::string const &username, int k);
 bool usernameExists(std::string const &username);
 

@@ -1078,8 +1078,20 @@ namespace libtorrent
 		if (!m_settings.disable_hash_checks)
 		{
 		    std::string errmsg;
-		    *hash_ok = acceptSignedPost((char const*)p->blocks[0].buf, piece_size,
+			switch (j.storage->info()->type())
+			{
+			case torrent::type_t::twister_messages:
+				*hash_ok = acceptSignedPost((char const*)p->blocks[0].buf, piece_size,
 						j.storage->info()->name(), j.piece, errmsg, &j.post_flags);
+				break;
+			case torrent::type_t::twister_data:
+				*hash_ok = acceptSignedFile((char const*)p->blocks[0].buf, piece_size,
+						j.storage->info()->name(), j.piece, errmsg);
+				break;
+			default:
+				TORRENT_ASSERT(false);
+				break;
+			}
 		}
 
 		ret = copy_from_piece(const_cast<cached_piece_entry&>(*p), hit, j, l);
