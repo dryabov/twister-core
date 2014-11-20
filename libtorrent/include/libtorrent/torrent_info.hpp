@@ -60,7 +60,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/socket.hpp"
 #include "libtorrent/policy.hpp" // for policy::peer
 #include "libtorrent/torrent_pieces.hpp"
-#include "libtorrent/torrent.hpp"
 
 namespace libtorrent
 {
