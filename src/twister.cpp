@@ -1826,7 +1826,9 @@ Value newpostmsg(const Array& params, bool fHelp)
             strData = DecodeBase64(strData);
         } else if( strFormat == "hex" ) {
             vector<unsigned char> vch = ParseHex(strData);
-            strData = string((const char *)vch.data(), vch.size());
+            strData = std::string((const char *)vch.data(), vch.size());
+        } else {
+            throw JSONRPCError(RPC_INTERNAL_ERROR,"unknown data format");
         }
         // @TODO: limit filesize to 128Mb (maximum piece size in torrent, 2^13*16Kb)
         vFile["s"] = strData.size();
